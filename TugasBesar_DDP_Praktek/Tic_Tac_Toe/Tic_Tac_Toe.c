@@ -1,5 +1,101 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
+/* =====================================*/
+/*				UDT						*/
+/* =====================================*/
+
+typedef struct
+{
+	int row;
+	int col;
+} MoveFormat;
+
+typedef struct
+{
+	char NameP1[12];
+	char NameP2[12];
+} PlayerName;
+
+/* =====================================*/
+/*				Deklarasi Modul			*/
+/* =====================================*/
+void Draw3x3Board(char**);
+void Draw5x5Board(char**);
+void Draw7x7Board(char**);
+void DrawBoard(char **board, int boardSize);
+
+char** CreateBoard(int boardSize);
+int StreakRule(int boardSize);
+int CheckHorizontal(char **board, int boardSize);
+int CheckVertical(char **board, int boardSize);
+int CheckMainDiagonal(char **board, int boardSize);
+int CheckSecDiagonal(char **board, int boardSize);
+int CheckWin(char **board, int boardSize);
+void MakeMove(char **board, int boardSize, int *currentPlayer, int gameMode);
+void GetUserInput(char **board, MoveFormat *playerMove,  int *currentPlayer, int boardSize);
+void GetComputerInput(MoveFormat *computerMove, int *currentPlayer);
+int isValidInput(char **board, MoveFormat *playerMove, int BoardSize);
+void FillBoard(char **board, MoveFormat Move, int boardSize, int *currentPlayer);
+void InputName(PlayerName *playerName);
+
+/* =====================================*/
+/*				Modul Utama				*/
+/* =====================================*/
+// ini merupakan modul utama program
+
+int main()
+{
+	char **board;
+	int gameMode = 1;
+	int boardSize = 3, col, row, currentPlayer = 1, isWin = 0, maxRound, roundPlayed = 0;
+	PlayerName playerName;
+	
+	/* Time variabel */
+	clock_t elapsedTime, timer;
+	int timeConsume;
+	
+	board = CreateBoard(boardSize);
+	maxRound = boardSize * boardSize;
+	
+	InputName(&playerName);
+	
+	// Game Start
+	elapsedTime = clock();
+	while(roundPlayed != maxRound)
+	{
+		DrawBoard(board, boardSize);
+		isWin = CheckWin(board, boardSize);
+		if(isWin > 0)
+			break;
+		MakeMove(board, boardSize, &currentPlayer, gameMode);
+		roundPlayed++;
+	}
+	
+	elapsedTime = clock() - elapsedTime;
+	timeConsume = elapsedTime / (CLOCKS_PER_SEC);
+	// Game End
+	
+	DrawBoard(board, boardSize);
+	if(isWin == 0)
+		printf("there is no winner\n");
+	else
+	{
+		if(currentPlayer == 2)
+		{	
+			printf("winner is player 1 : %s\n", playerName.NameP1);
+			printf("with time to complete : %d", timeConsume);	
+		}
+		else if(currentPlayer == 1)
+		{	
+			printf("winner is player 2 : %s\n", playerName.NameP2);
+			printf("with time to complete : %d", timeConsume);	
+		}
+	}
+	
+	return 0;
+}
 
 /* =====================================*/
 /*				Modul Tampilan			*/
@@ -55,7 +151,6 @@ void Draw7x7Board(char**board)
     
     printf("\n\n");
 }
-
 
 /* modul untuk menampilkan papan permainan */
 void DrawBoard(char **board, int boardSize)
@@ -135,6 +230,7 @@ int CheckHorizontal(char **board, int boardSize)
 	/* jika tidak ada yang sama, belum ada pemenang */
 	return 0;
 }
+
 
 /* Modul untuk memeriksa kemenangan secara vertical */
 int CheckVertical(char **board, int boardSize)
@@ -232,31 +328,87 @@ int CheckWin(char **board, int boardSize)
 		return 0;
 }
 
-
-/* =====================================*/
-/*				Modul Utama				*/
-/* =====================================*/
-// ini merupakan modul utama program
-
-int main()
+void MakeMove(char **board, int boardSize, int *currentPlayer, int gameMode)
 {
-	char **board;
-	int gameMode = 7;
-	int boardSize, col, row, currentPlayer, isWin = 0, maxRound;
+	/* Get Input */
+	MoveFormat Move;
 	
-	boardSize = gameMode;
-	board = CreateBoard(boardSize);
-	maxRound = boardSize * boardSize;
+	if(gameMode == 1)
+	{
+		GetUserInput(board, &Move, currentPlayer, boardSize);
+	}
+	else if(gameMode == 2)
+	{
+		if(*currentPlayer == 1)
+			GetUserInput(board, &Move, currentPlayer, boardSize);
+		else if(*currentPlayer == 2)
+			GetComputerInput(&Move, currentPlayer);	
+	}
 	
-	board[0][1] = 'X';
-	board[1][1] = 'X';
-	board[2][1] = 'X';
-	board[3][1] = 'X';
-	board[4][1] = 'X';
-	
-	DrawBoard(board, boardSize);
-	isWin = CheckWin(board, boardSize);
-	
-	printf("%d", isWin);
-	return 0;
+	/* Fill to Board */
+	FillBoard(board, Move, boardSize, currentPlayer);
 }
+
+void GetUserInput(char **board, MoveFormat *playerMove, int *currentPlayer, int boardSize)
+{
+	int isValid = 1;
+	do
+	{
+		if(isValid == 0)
+		{
+			DrawBoard(board, boardSize);
+			printf("Inputan tidak valid, harap masukan kembali.\n\n");
+		}
+		printf("Giliran player %d. \n", *currentPlayer);
+		printf("Masukan baris : "); scanf("%d", &playerMove->row);
+		printf("Masukan kolom : "); scanf("%d", &playerMove->col);
+		isValid = isValidInput(board, playerMove, boardSize);
+	}while(isValid == 0);
+}
+
+void GetComputerInput(MoveFormat *computerMove, int *currentPlayer)
+{
+	
+}
+
+int isValidInput(char **board, MoveFormat *playerMove, int boardSize)
+{
+	if((playerMove->row < 0 || playerMove->row >= boardSize ) && (playerMove->col < 0 || playerMove->col >= boardSize))
+		return 0;
+	else
+	{
+		if(board[playerMove->row][playerMove->col] != ' ')
+			return 0;
+		else
+			return 1;
+	}
+}
+
+void FillBoard(char **board, MoveFormat Move, int boardSize, int *currentPlayer)
+{
+	if(Move.row < boardSize && Move.col < boardSize && board[Move.row][Move.col] == ' ')
+	{
+		if(*currentPlayer == 1)
+		{
+			board[Move.row][Move.col] = 'X';
+			*currentPlayer = 2;
+		}	
+		else
+		{
+			board[Move.row][Move.col] = 'O';
+			*currentPlayer = 1;
+		}	
+					
+	}
+}
+
+void InputName(PlayerName *playerName)
+{
+	printf("Input Player 1 Name : ");
+	fgets(playerName->NameP1, 12, stdin);
+	printf("Input Player 2 Name  : ");
+	fgets(playerName->NameP2, 12, stdin);
+}
+
+
+
